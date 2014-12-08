@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	    <script src="jquery-1.8.2.min.js"></script>
+	    <script src="jquery.searchabledropdown-1.0.8.min.js"></script>
+		<script type="text/javascript">
+			// demo functions
+			$(document).ready(function() {
+				$("select").searchable();
+				$("#value").html($("#receiverSelector :selected").text() + " (VALUE: " + $("#receiverSelector").val() + ")");
+				$("select").change(function(){
+					$("#value").html(this.options[this.selectedIndex].text + " (VALUE: " + this.value + ")");
+				});
+				fetchReceivers();
+			});
+			
+			function fetchReceivers() {
+				//fetch online receivers randomly
+				$.ajax({
+	         		type:"POST",
+	         		url:fetchReceiversUrl,
+	         		success:function(data) {
+	         			var json=JSON.parse(data);
+	         			for(var i=0;i<json.length;i++) {
+	         				appendSelectOption(json[i].node, json[i].nickName);
+	         			}
+	         		}
+         		})
+			}
+		
+			/* function modifySelect() {
+				$("select").get(0).selectedIndex = 5;
+			} */
+		
+			function appendSelectOption(value, text) {
+				$("select").append("<option value=\"" + value + "\">" + text + "</option>");
+			}
+		
+			/* function applyOptions() {			  
+				$("select").searchable({
+					maxListSize: $("#maxListSize").val(),
+					maxMultiMatch: $("#maxMultiMatch").val(),
+					latency: $("#latency").val(),
+					exactMatch: $("#exactMatch").get(0).checked,
+					wildcards: $("#wildcards").get(0).checked,
+					ignoreCase: $("#ignoreCase").get(0).checked
+				});
+			} */
+		</script>
+	</head>
+    <body>
+        <h1>Easy Chat</h1>
+        <p/>
+        <table>
+        	<tr>
+        		<td><font color="red">Status:</font></td><td><label id="statusBar">Disconnected</label></td>
+        	</tr>
+        	<tr>
+        		<td><font color=blue>Hint:</font></td><td><label id="hintBar"></label></td>
+        	</tr>
+        	<tr>
+        		<td><font color=green>Nick:</font></td>
+        		<td><input type="text" id="nick">&nbsp;&nbsp;<input type="button" value="bind" onclick="bind()"></td>
+        	</tr>
+        </table>
+        
+        <p/>
+        <table>
+        	<tr>
+        		<td>
+        			<textarea id="content" cols=50 rows=2></textarea>
+        		</td>
+        		<td valign="top"><input type="button" value="send to" onclick="send()"></td>
+        		<td valign="top">
+        			<select id="receiverSelector">
+        				<option value="">==select one==</option>
+        			</select>
+        		</td>
+        	</tr>
+        	<tr>
+        		<td colspan="3"><textarea id="messageBoard" cols=80 rows=20 readonly="readonly"></textarea></td>
+        	</tr>
+        </table>
+        
+    </body>
+    <script src="websocket.js"></script>
+	<script src="packet.js"></script>
+	<script src="util.js"></script>
+    <script> 
+    
+    	function bind() {
+    		if (!connected) {
+    			alert("plz connect to server first");
+    			return;
+    		}
+    		if (nickField.value == '') {
+    			alert("nick can't be empty");
+    			return;
+    		}
+    		var bind = new Bind(nickField.value, DOMAIN, RESOURCE, VERSION);
+    		ws.send(JSON.stringify(new Packet(PacketType.BIND, JSON.stringify(bind))));
+    	}
+    	function send() {
+    		if (!binded) {
+    			alert("please do bind");
+    			return;
+    		}
+    		if ($("#receiverSelector").val() == '') {
+    			alert("receiver can't be empty");
+    			return;
+    		}
+    		var message = new Message(node + "@" + DOMAIN + "/" + RESOURCE, $("#receiverSelector").val() + "@" + DOMAIN, RandNum(6) + "-" + new Date().getTime(), contentField.value);
+    		var payload = JSON.stringify(message);
+    		var packet = new Packet(PacketType.MESSAGE, payload);
+    		ws.send(JSON.stringify(packet));
+    		var records = messageBoard.value;
+    		if (records == '') {
+    			messageBoard.value = "I:" + contentField.value;
+    		} else {
+    			messageBoard.value = records + '\r\n' + "I:" + contentField.value;
+    		}
+    		contentField.value = "";
+    	}
+    </script>
+</html>
